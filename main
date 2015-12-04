@@ -1,0 +1,282 @@
+// The light pet for Adeline!
+/* 
+
+By: Johnathon Reeve
+Date: March 11th 2015
+V2.4
+
+
+Be sure to run the Example Sketch "DS1037RTC SetTime" first and check that the RTC has the correct time. 
+Updated the notes to reflect current times and colors. 
+This is the version that is running on the mushroom since April 9th 2014. 
+
+*/
+
+
+
+#include <Time.h>
+#include <TimeAlarms.h>
+#include <Wire.h>  
+#include <DS1307RTC.h>
+#include <Adafruit_NeoPixel.h>
+#define PIN 3
+
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(60, PIN, NEO_GRB + NEO_KHZ800);
+
+// Added as part of the pulsing colours
+// Change These Variables
+int maxBrightness = 250;
+int minBrightness = 5;
+int fadeSpeed = 10;
+
+
+
+void setup(){
+
+  
+  Serial.begin(9600);
+  //while (!Serial) ; // Needed for Leonardo only
+  setSyncProvider(RTC.get);   // the function to get the time from the RTC
+  if (timeStatus() != timeSet) 
+     Serial.println("Unable to sync with the RTC");
+  else
+     Serial.println("RTC has set the system time");    
+  
+  strip.begin();
+  strip.show(); // Initialize all pixels to 'off'
+   
+  Alarm.timerOnce(1, OnceOnly);
+  Alarm.alarmRepeat(6,55,0, wakeupTime);
+  Alarm.alarmRepeat(7,05,0, morningTime);
+  Alarm.alarmRepeat(19,15,0, storyTime);
+  Alarm.alarmRepeat(19,30,0, quietTime);
+  Alarm.alarmRepeat(19,45,0, sleepingTime);
+}
+
+void loop()
+{
+
+  if (Serial.available()) {
+    time_t t = processSyncMessage();
+    if (t != 0) {
+      RTC.set(t);   // set the RTC and the system time to the received value
+      setTime(t);  
+      //Serial.print(t);      
+    }
+      {
+  // Added as part of the pulsing colours
+  //Set the color with Red, Gree, Blue values
+//  pulseColor(strip.Color(255, 0, 0), fadeSpeed);
+// pulseColor(strip.Color(0, 0, 255), fadeSpeed); 
+  }  
+  }  
+
+
+  digitalClockDisplay();  
+  Alarm.delay(1000);
+}
+
+
+void digitalClockDisplay(){
+  // digital clock display of the time
+  Serial.print(hour());
+  printDigits(minute());
+  printDigits(second());
+  Serial.print(" ");
+  Serial.print(day());
+  Serial.print(" ");
+  Serial.print(month());
+  Serial.print(" ");
+  Serial.print(year()); 
+  Serial.println(); 
+}
+
+
+void printDigits(int digits){
+  // utility function for digital clock display: prints preceding colon and leading 0
+  Serial.print(":");
+  if(digits < 10)
+    Serial.print('0');
+  Serial.print(digits);
+}
+
+
+
+  /*  code to process time sync messages from the serial port   */
+#define TIME_HEADER  "T"   // Header tag for serial time sync message
+
+unsigned long processSyncMessage() {
+  unsigned long pctime = 0L;
+  const unsigned long DEFAULT_TIME = 1357041600; // Jan 1 2013 
+
+  if(Serial.find(TIME_HEADER)) {
+     pctime = Serial.parseInt();
+     return pctime;
+     if( pctime < DEFAULT_TIME) { // check the value is a valid time (greater than Jan 1 2013)
+       pctime = 0L; // return 0 to indicate that the time is not valid
+     }
+  }
+  return pctime;
+}
+  
+
+void OnceOnly(){
+  if (( hour() <= 6 ) && ( minute() <= 29))
+  {
+solidColor(strip.Color(50, 0, 0), 1); //Red
+  }
+  if (( hour() == 6 ) && ( minute() <= 59))
+  {
+solidColor(strip.Color(8, 80, 0), 1); //Green
+  }
+  if (( hour() <= 18 ) && ( minute() <= 59))
+  {
+  //  rainbow(5);
+solidColor(strip.Color(175, 175, 200), 1); //Bright White
+  }
+
+      if (( hour() == 19) && ( minute() <= 15))
+      {
+      //  rainbow(5);
+      //  Alarm.delay(1000);
+        solidColor(strip.Color(8, 80, 0), 1); //GREEN  
+      }
+      if (( hour() == 19) && ( minute() >= 15))
+      {
+     //   rainbow(5);
+     //   Alarm.delay(1000);
+        solidColor(strip.Color(50, 0, 100), 1); //Purple
+      }
+        if (( hour() == 19) && ( minute() >= 45))
+      {
+     //   rainbow(5);
+     //   Alarm.delay(1000);
+        solidColor(strip.Color(30, 0, 0), 1); //RED
+      }
+      if (( hour() < 23) && (hour() > 19) && ( minute() < 59))
+      {
+       // pulseColor(strip.Color(40, 0, 0), fadeSpeed);
+        solidColor(strip.Color(30, 0, 0), 1); //RED
+        
+/*        solidColor(strip.Color(2, 20, 0), 1); //GREEN
+        Alarm.delay(1000);
+        solidColor(strip.Color(4, 40, 0), 1); //GREEN
+        Alarm.delay(1000);
+        solidColor(strip.Color(6, 60, 0), 1); //GREEN
+        Alarm.delay(1000);
+        solidColor(strip.Color(8, 80, 0), 1); //GREEN
+*/
+      }
+}
+
+void wakeupTime() {  // 6:30am - 6:59am If the time is 6:00am - 6:29am set the neopixel GREEN
+        solidColor(strip.Color(2, 20, 0), 1); //GREEN
+        Alarm.delay(1000);
+        solidColor(strip.Color(4, 40, 0), 1); //GREEN
+        Alarm.delay(1000);
+        solidColor(strip.Color(6, 60, 0), 1); //GREEN
+        Alarm.delay(1000);
+        solidColor(strip.Color(8, 80, 0), 1); //GREEN
+} 
+
+void morningTime() { // 7:00am - 6:59pm If the time is 6:00am - 6:29am set the neopixel to Bright White;
+solidColor(strip.Color(175, 175, 200), 1); //Bright White
+}
+
+void storyTime() { // 7:00pm - 7:14pm set neopixel GREEN
+        solidColor(strip.Color(2, 20, 0), 1); //GREEN
+        Alarm.delay(1000);
+        solidColor(strip.Color(4, 40, 0), 1); //GREEN
+        Alarm.delay(1000);
+        solidColor(strip.Color(6, 60, 0), 1); //GREEN
+        Alarm.delay(1000);
+        solidColor(strip.Color(8, 80, 0), 1); //GREEN
+}
+
+void quietTime() { // 7:15pm - 7:29pm set neopixel Purple
+solidColor(strip.Color(50, 0, 100), 1); //Purple
+}
+
+void sleepingTime() { // 7:30pm - 6:00am set neopixel to solid red
+        solidColor(strip.Color(150, 0, 150), 1); //RED
+        Alarm.delay(1000);
+        solidColor(strip.Color(125, 0, 100), 1); //RED
+        Alarm.delay(1000);
+        solidColor(strip.Color(100, 0, 50), 1); //RED
+        Alarm.delay(1000);
+        solidColor(strip.Color(75, 0, 0), 1); //RED
+        Alarm.delay(1000);
+        solidColor(strip.Color(50, 0, 0), 1); //RED
+}
+
+
+
+void rainbow(uint8_t wait) {
+  uint16_t i, j;
+
+  for(j=0; j<256; j++) {
+    for(i=0; i<strip.numPixels(); i++) {
+      strip.setPixelColor(i, Wheel((i+j) & 255));  //255 changed to 100
+    }
+    strip.show();
+    delay(wait);
+  }
+}
+
+// Fill the dots one after the other with a color
+void solidColor(uint32_t c, uint8_t wait) {
+  for(uint64_t i=0; i<strip.numPixels(); i++) {
+      strip.setPixelColor(i, c);
+      strip.show();
+      delay(wait);
+  }
+}
+
+// Slightly different, this makes the rainbow equally distributed throughout
+void rainbowCycle(uint8_t wait) {
+  uint16_t i, j;
+
+  for(j=0; j<256*5; j++) { // 5 cycles of all colors on wheel
+    for(i=0; i< strip.numPixels(); i++) {
+      strip.setPixelColor(i, Wheel(((i * 256 / strip.numPixels()) + j) & 255));
+    }
+    strip.show();
+    delay(wait);
+  }
+}
+
+// Input a value 0 to 255 to get a color value.
+// The colours are a transition r - g - b - back to r.
+uint32_t Wheel(byte WheelPos) {
+  if(WheelPos < 85) {
+   return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+  } else if(WheelPos < 170) {
+   WheelPos -= 85;
+   return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+  } else {
+   WheelPos -= 170;
+   return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+  }
+}
+
+void pulseColor(uint32_t c, uint8_t wait) {
+  //Increase Brightness / Fade In
+  for(int i=minBrightness; i<maxBrightness; i++) {
+      strip.setBrightness(i);
+      for(int x=0; x<strip.numPixels(); x++){
+        strip.setPixelColor(x,c);
+      }
+      strip.show();
+      Alarm.delay(wait);
+  }
+  //Lower Brightness / Fade Out
+  for(int i=maxBrightness; i>minBrightness; i--) {
+       strip.setBrightness(i);
+      for(int x=0; x<strip.numPixels(); x++){
+        strip.setPixelColor(x,c);
+      }
+      strip.show();
+      Alarm.delay(wait);
+      //break;
+  }
+}
